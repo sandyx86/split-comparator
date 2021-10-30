@@ -28,9 +28,8 @@ def main():
                 print("Game:          ", f_info.GameName)
                 print("Category:      ", f_info.CategoryName)
                 print("Attempts:      ", f_info.AttemptCount)
-                print(f_info.Runs)
                 for run in f_info.Runs:
-                    print(run)
+                    print(run.Id)
             except:
                 print("file not found")
         
@@ -42,20 +41,29 @@ class getFileInfo():
         self.GameName       = root.find("GameName").text
         self.CategoryName   = root.find("CategoryName").text
         self.AttemptCount   = root.find("AttemptCount").text
-        self.Runs = []
+        self.Runs = [] #this should be a run object, a time paired with an id
         
         class getRunInfo():
-            def __init__(self, root):
-                self.FinalTime = root.find("GameTime").text
-                self.Id = root.find("Attempt").attrib("id")
+            def __init__(self, element):
+                self.Id = ""
+                self.Time = ""
+                for b in element.iter("GameTime"):
+                    
+                    #print(element.attrib['id'])
+                    #print(b.text)
+                    self.Id = element.attrib['id']
+                    self.Time = b.text
+                
 
                 #self.Id = root.attrib.get("id") #get the id of the run
         
-        #gets every id for every run in <AttemptHistory>
+        #gets every id for every finished run in <AttemptHistory>
+        #now make a run object with the time and id attached
         for a in root.iter("AttemptHistory"):
-            for b in root.iter("Attempt"):
-                print(b.attrib['id'])
-    
+            for b in a.iter("Attempt"):
+                self.Runs.append(getRunInfo(b))
+                #print(b.attrib['id'])
+
             
 
 
