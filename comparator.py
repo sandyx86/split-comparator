@@ -5,6 +5,7 @@
 # function to list all final times
 # function to list all split times within a run
 # function to do both of those things
+# add a mode option for realtime/gametime
 
 # comparator.py file1.lss -c file2.lss
 
@@ -23,24 +24,41 @@ def main():
             try:
                 tree = et.parse(arg)
                 root = tree.getroot()
-                f_info = getRunInfo(root)
+                f_info = getFileInfo(root)
                 print("Game:          ", f_info.GameName)
                 print("Category:      ", f_info.CategoryName)
                 print("Attempts:      ", f_info.AttemptCount)
+                print(f_info.Runs)
+                for run in f_info.Runs:
+                    print(run)
             except:
                 print("file not found")
         
 #class for the name and category of a split file
 #should also have: RunCount, FinishedRunCount, Platform, AttemptCount
-class getRunInfo():
+#make nested classes
+class getFileInfo():
     def __init__(self, root):
         self.GameName       = root.find("GameName").text
         self.CategoryName   = root.find("CategoryName").text
         self.AttemptCount   = root.find("AttemptCount").text
+        self.Runs = []
+        
+        class getRunInfo():
+            def __init__(self, root):
+                self.FinalTime = root.find("GameTime").text
+                self.Id = root.find("Attempt").attrib("id")
 
-#def getRunInfo(root):
-#    print("Game:        ", root.find("GameName").text)
-#    print("Category:    ", root.find("CategoryName").text)
+                #self.Id = root.attrib.get("id") #get the id of the run
+        
+        #gets every id for every run in <AttemptHistory>
+        for a in root.iter("AttemptHistory"):
+            for b in root.iter("Attempt"):
+                print(b.attrib['id'])
+    
+            
+
+
     
 
         
