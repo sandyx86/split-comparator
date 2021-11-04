@@ -2,7 +2,7 @@
 
 # Compare any run of any two split files
 # Compare any two runs of any split file
-# function to list all final times
+# function to list all final times - done -
 # function to list all split times within a run
 # function to do both of those things
 # add a mode option for realtime/gametime
@@ -13,7 +13,7 @@ import sys, getopt
 import xml.etree.ElementTree as et
 def main():
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "l:", [])
+        opts, args = getopt.getopt(sys.argv[1:], "l:c:", [])
     except getopt.GetoptError:
         print("usage: comparator.py file_1 [run id] -c file_2 [run id]") #allows for the same input file twice even though that seems weird
         sys.exit(2)
@@ -29,9 +29,22 @@ def main():
                 print("Category:      ", f_info.CategoryName)
                 print("Attempts:      ", f_info.AttemptCount)
                 for run in f_info.Runs:
-                    print(run.Id)
+                    print(" ", run.Id, run.Time)
             except:
                 print("file not found")
+        elif opt == "-c":
+            try:
+                tree = et.parse(arg)
+                root = tree.getroot()
+                f_info = getFileInfo(root)
+                print("Game:          ", f_info.GameName)
+                print("Category:      ", f_info.CategoryName)
+                print("Attempts:      ", f_info.AttemptCount)
+                for run in f_info.Runs:
+                    print(run.Id, run.Time)
+            except:
+                print("file not found")
+
         
 #class for the name and category of a split file
 #should also have: RunCount, FinishedRunCount, Platform, AttemptCount
@@ -43,26 +56,36 @@ class getFileInfo():
         self.AttemptCount   = root.find("AttemptCount").text
         self.Runs = [] #this should be a run object, a time paired with an id
         
+        class getSegments(): #should probably pass the run id
+                def __init__(self, runId):
+                    self.SegNames = []
+
+                    for a in root.iter("Time"):
+                        if a.attrib['id'] == runId:
+                            print(a.attrib['id'])
+                            for name in root.iter("Name"):
+                                print(name.text)
+                                print(a.find("GameTime").text)
+
+
+
         class getRunInfo():
             def __init__(self, element):
-                self.Id = ""
-                self.Time = ""
+                self.Segments = []
                 for b in element.iter("GameTime"):
-                    
-                    #print(element.attrib['id'])
-                    #print(b.text)
                     self.Id = element.attrib['id']
                     self.Time = b.text
-                
+                    self.Segments.append(getSegments(self.Id))
 
-                #self.Id = root.attrib.get("id") #get the id of the run
-        
+
+                        
+
+
         #gets every id for every finished run in <AttemptHistory>
-        #now make a run object with the time and id attached
         for a in root.iter("AttemptHistory"):
             for b in a.iter("Attempt"):
-                self.Runs.append(getRunInfo(b))
-                #print(b.attrib['id'])
+                for c in b.iter("GameTime"):
+                    self.Runs.append(getRunInfo(b))
 
             
 
