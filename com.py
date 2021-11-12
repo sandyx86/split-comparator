@@ -116,7 +116,7 @@ def main():
                             try:
                                 diff += segment[0].sTime - segment[1].sTime
                             except:
-                                continue
+                                print(f"{error}: {'Missing Segment!'}")
                             try:
                                 if (round(segment[0].sTime - segment[1].sTime)) > 0:
                                     p_diff += segment[0].sTime - segment[1].sTime
@@ -124,9 +124,8 @@ def main():
                                 else:
                                     n_diff += segment[0].sTime - segment[1].sTime
                                     print(f"{segment[0].Name:<{run_1.Maxlen}}|{segment[0].Time:<12} \033[1;32m{round(segment[0].sTime - segment[1].sTime, 2):>7}\033[0;37m {segment[1].Time:>12}")
-                                #print(run_1.Maxlen)
                             except:
-                                print(f"{error:{run_1.Maxlen}}|{''}")
+                                print(f"{error}: {'Missing Segment!'}")
                         print("--" * run_1.Maxlen)
                         if diff > 0:
                             print(f"{'':{run_1.Maxlen}}|{run_1.Time:<12} \033[1;31m{round(diff, 2):>7}\033[0;37m {run_2.Time:>12}")
