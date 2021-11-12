@@ -162,7 +162,7 @@ def main():
             try:
                 print("IDs:")
                 print("_________________________")
-                for r in f_list[int(index)].Runs:
+                for r in f_list[int(index)].main.Runs:
                     print(r.Id)
             except:
                 print("List index out of range")
