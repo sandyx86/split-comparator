@@ -2,10 +2,11 @@
 
 #Real Time and Game Time Modes
 
-#Change the index numbers to names
+#Change the index numbers to names, optionally
 #Function to clean unfinished runs
-#Add total times and total +/- to the compare function
+#Allow the possibility of loading a file with spaces in its name
 
+#Add total times and total +/- to the compare function -- done
 #Find the longest string to dynamically add padding -- done
 #Load file function -- done
 #List a specific run by its id -- done
