@@ -19,6 +19,7 @@ import os
 import xml.etree.ElementTree as et
 f_list = []
 error = "\033[1;31mERROR\033[0;37m"
+print("type \"help\" for help")
 def main():
     #gets a segment object by its id, returns name and time
     class getSeg():
@@ -104,20 +105,35 @@ def main():
 
     #Subtracts the sTime of run_1 and run_2
     def comCompare(file_1, id_1, file_2, id_2):
+        diff = 0
+        n_diff = 0
+        p_diff = 0
         for run_1 in file_1.Runs:
             if run_1.Id == id_1:
                 for run_2 in file_2.Runs:
                     if run_2.Id == id_2:
                         for segment in zip(run_1.Segments, run_2.Segments):
                             try:
+                                diff += segment[0].sTime - segment[1].sTime
+                            except:
+                                continue
+                            try:
                                 if (round(segment[0].sTime - segment[1].sTime)) > 0:
+                                    p_diff += segment[0].sTime - segment[1].sTime
                                     print(f"{segment[0].Name:<{run_1.Maxlen}}|{segment[0].Time:<12} \033[1;31m{round(segment[0].sTime - segment[1].sTime, 2):>7}\033[0;37m {segment[1].Time:>12}")
                                 else:
+                                    n_diff += segment[0].sTime - segment[1].sTime
                                     print(f"{segment[0].Name:<{run_1.Maxlen}}|{segment[0].Time:<12} \033[1;32m{round(segment[0].sTime - segment[1].sTime, 2):>7}\033[0;37m {segment[1].Time:>12}")
                                 #print(run_1.Maxlen)
                             except:
-                                print(f"{error:<{run_1.Maxlen}}|{''}")
-
+                                print(f"{error:{run_1.Maxlen}}|{''}")
+                        print("--" * run_1.Maxlen)
+                        if diff > 0:
+                            print(f"{'':{run_1.Maxlen}}|{run_1.Time:<12} \033[1;31m{round(diff, 2):>7}\033[0;37m {run_2.Time:>12}")
+                        else:
+                            print(f"{'':{run_1.Maxlen}}|{run_1.Time:<12} \033[1;32m{round(diff, 2):>7}\033[0;37m {run_2.Time:>12}")
+                        print(f"{'':{run_1.Maxlen}}|{'':<12} \033[1;31m{round(p_diff, 2):>7}\033[0;37m")
+                        print(f"{'':{run_1.Maxlen}}|{'':<12} \033[1;32m{round(n_diff, 2):>7}\033[0;37m")
 
     #translates human readable time to pure seconds
     def toSeconds(string):
@@ -125,8 +141,8 @@ def main():
         return int(x[0])*3600 + int(x[1])*60 + float(x[2])
 
     #Command Line Interface
-    command = input("comparator>")
-    match command.split():
+    command = input("\033[92mcomparator\033[0m>")
+    match command.split(" "):
         case ["quit"]:
             sys.exit(0)
         case ["exit"]:
