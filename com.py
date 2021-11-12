@@ -1,17 +1,16 @@
 ##Things that need to be done...##
+
 #Real Time and Game Time Modes
-#Convert strings of time to integers / floats -- done
-
-#List a specific run by its id
- # - Could I edit the code for comList() to be able to do this with _?
- # Add functions for comparing runs
-
-#Find the longest string to dynamically add padding
 
 #Change the index numbers to names
-
 #Function to clean unfinished runs
-#Load file function -- done for now
+#Add total times and total +/- to the compare function
+
+#Find the longest string to dynamically add padding -- done
+#Load file function -- done
+#List a specific run by its id -- done
+#Add functions for comparing runs -- done
+#Convert strings of time to integers / floats -- done
 
 #Make the source code look pretty
 
