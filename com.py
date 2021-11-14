@@ -2,10 +2,15 @@
 
 #Real Time and Game Time Modes
 
+
+#CMD/PowerShell Mode for Windows users (no ANSI)
 #Change the index numbers to names, optionally
 #Function to clean unfinished runs
 #Allow the possibility of loading a file with spaces in its name
+#Comment the code better
 
+#Function to list all runs by time and id -- done
+#Function to list runs in order from best to worst -- done
 #Add total times and total +/- to the compare function -- done
 #Find the longest string to dynamically add padding -- done
 #Load file function -- done
@@ -31,7 +36,7 @@ def main():
                         for t_id in time.iter("Time"):
                             if (t_id.attrib['id'] == id) & (seg_element.find("Name").text == name):
                                 try:
-                                    self.Time = t_id.find("GameTime").text.strip("0:")
+                                    self.Time = t_id.find("GameTime").text
                                     self.Name = seg_element.find("Name").text
                                     self.sTime = toSeconds(t_id.find("GameTime").text)
                                 except:
@@ -45,7 +50,7 @@ def main():
             #self.SegNames = []
             for time in attempt.iter("GameTime"):
                 self.Id = attempt.attrib['id']
-                self.Time = time.text.strip("0:")
+                self.Time = time.text
                 for segment in root.iter("Segments"):
                     for seg_element in segment.iter("Segment"):
                         for name in seg_element.iter("Name"):
@@ -79,11 +84,11 @@ def main():
         print(f"Attempts:       {len(main.Runs)}/{main.AttemptCount}")
         for run in main.Runs:
             print(f"-- ID: {run.Id} --")
-            print(f"-- Time: {run.Time} --")
+            print(f"-- Time: {zeroStrip(run.Time)} --")
             print("")
             for seg in run.Segments:
                 try:
-                    print(f"{'':5}{seg.Name:<{main.Runs[0].Maxlen}} | {seg.Time:10}")
+                    print(f"{'':5}{seg.Name:<{main.Runs[0].Maxlen}} | {zeroStrip(seg.Time):10}")
                 except:
                     print(f"{'':5}{error}")
             print("")
@@ -95,14 +100,31 @@ def main():
         for run in main.Runs:
             if run.Id == id:
                 print(f"-- ID: {run.Id} --")
-                print(f"-- Time: {run.Time} --")
+                print(f"-- Time: {zeroStrip(run.Time)} --")
                 print("")
                 for seg in run.Segments:
                     try:
-                        print(f"{'':5}{seg.Name:<{main.Runs[0].Maxlen}} | {seg.Time:10}")
+                        print(f"{'':5}{seg.Name:<{main.Runs[0].Maxlen}} | {zeroStrip(seg.Time):10}")
                     except:
                         print(f"{'':5}{error}")
                 print("")
+
+    #Lists runs in order from best to worst
+    def comBest(main):
+        i = 0
+        print("Game:          ", main.GameName)
+        print("Category:      ", main.CategoryName)
+        print(f"Attempts:       {len(main.Runs)}/{main.AttemptCount}")
+        sort_list = []
+        for run in main.Runs:
+            sort_list.append([toSeconds(run.Time), run.Id, run.Time.strip("0:")])
+
+        for run in sorted(sort_list):
+            print(f"#{i}: {run[2]:<8} | id: {run[1]}")
+            i += 1
+
+
+
 
     #Subtracts the sTime of run_1 and run_2
     def comCompare(file_1, id_1, file_2, id_2):
@@ -121,24 +143,29 @@ def main():
                             try:
                                 if (round(segment[0].sTime - segment[1].sTime)) > 0:
                                     p_diff += segment[0].sTime - segment[1].sTime
-                                    print(f"{segment[0].Name:<{run_1.Maxlen}}|{segment[0].Time:<12} \033[1;31m{round(segment[0].sTime - segment[1].sTime, 2):>7}\033[0;37m {segment[1].Time:>12}")
+                                    print(f"{segment[0].Name:<{run_1.Maxlen}}|{zeroStrip(segment[0].Time):<12} \033[1;31m{round(segment[0].sTime - segment[1].sTime, 2):>7}\033[0;37m {zeroStrip(segment[1].Time):>12}")
                                 else:
                                     n_diff += segment[0].sTime - segment[1].sTime
-                                    print(f"{segment[0].Name:<{run_1.Maxlen}}|{segment[0].Time:<12} \033[1;32m{round(segment[0].sTime - segment[1].sTime, 2):>7}\033[0;37m {segment[1].Time:>12}")
+                                    print(f"{segment[0].Name:<{run_1.Maxlen}}|{zeroStrip(segment[0].Time):<12} \033[1;32m{round(segment[0].sTime - segment[1].sTime, 2):>7}\033[0;37m {zeroStrip(segment[1].Time):>12}")
                             except:
                                 print(f"{error}: {'Missing Segment!'}")
                         print("--" * run_1.Maxlen)
                         if diff > 0:
-                            print(f"{'':{run_1.Maxlen}}|{run_1.Time:<12} \033[1;31m{round(diff, 2):>7}\033[0;37m {run_2.Time:>12}")
+                            print(f"{'':{run_1.Maxlen}}|{zeroStrip(run_1.Time):<12} \033[1;31m{round(diff, 2):>7}\033[0;37m {zeroStrip(run_2.Time):>12}")
                         else:
-                            print(f"{'':{run_1.Maxlen}}|{run_1.Time:<12} \033[1;32m{round(diff, 2):>7}\033[0;37m {run_2.Time:>12}")
+                            print(f"{'':{run_1.Maxlen}}|{zeroStrip(run_1.Time):<12} \033[1;32m{round(diff, 2):>7}\033[0;37m {zeroStrip(run_2.Time):>12}")
                         print(f"{'':{run_1.Maxlen}}|{'':<12} \033[1;31m{round(p_diff, 2):>7}\033[0;37m")
                         print(f"{'':{run_1.Maxlen}}|{'':<12} \033[1;32m{round(n_diff, 2):>7}\033[0;37m")
 
     #translates human readable time to pure seconds
+    #not to be used with a time string that has already been stripped!
     def toSeconds(string):
         x = string.split(':')
         return int(x[0])*3600 + int(x[1])*60 + float(x[2])
+
+    # using .strip() doesn't work in an f-string for some reason, so this is my solution
+    def zeroStrip(string):
+        return string.strip("0:")
 
     #Command Line Interface
     command = input("\033[92mcomparator\033[0m>")
@@ -178,32 +205,43 @@ def main():
                 print("IDs:")
                 print("_________________________")
                 for r in f_list[int(index)].main.Runs:
-                    print(r.Id)
+                    print(f"{r.Id}: {r.Time}")
             except:
                 print("List index out of range")
 
-        #Prints a run specified by id
-        case ["info", index, id]:
-            try:
-                comInfoID(f_list[int(index)].main, id)
-            except:
-                print(f"File \"{index}\" not yet loaded.")
+        #List command
+        case ["list", index, option]:
 
-        #Prints all runs in a loaded file
-        case ["info", index]:
-            try:
-                comInfo(f_list[int(index)].main)
-            except:
-                print(f"File \"{index}\" not yet loaded.")
+            match option:
+                case "-a": #-a for all
+                    try:
+                        comInfo(f_list[int(index)].main)
+                    except:
+                        print(f"File \"{index}\" not yet loaded.")
 
+                case "-b": #-b for best to worst
+                    try:
+                        comBest(f_list[int(index)].main)
+                    except:
+                        print(f"File \"{index}\" not yet loaded.")
+
+                case option:#list a specific runs segments
+                    try:
+                        comInfoID(f_list[int(index)].main, option)
+                    except:
+                        print(f"File \"{index}\" not yet loaded.")
+
+        #Command to compare one runs segment times to anothers
         case ["compare", file_1, id_1, file_2, id_2]:
             comCompare(f_list[int(file_1)].main, id_1, f_list[int(file_2)].main, id_2)
 
+        #lists all files in a folder
         case ["dir"]:
             for file in os.listdir():
                 print(file)
             print('')
 
+        #lists all files in a folder
         case ["ls"]:
             for file in os.listdir():
                 print(file)
@@ -228,9 +266,10 @@ def main():
             print("     ids [index]")
             print("         -prints all valid run IDs in a file")
             print('')
-            print("     info [index] *[id]")
+            print("     list [index] *[option/id]")
             print("         -lists all the segments in a run by the ID specified.")
-            print("         -if no ID specified, lists all segments for all runs in a file.")
+            print("         -a: list all runs with all segments")
+            print("         -b: list the runs in order from best to worst")
 
 
 
