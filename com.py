@@ -1,21 +1,13 @@
 ##Things that need to be done...##
 
-#Real Time and Game Time Mode switch
+#Real Time and Game Time Modes
 
-#In the Run Class, have a variable that says which Segment the run reset on, the segment after the last recorded segment
-    #Or a tuple of the reset point, and the ID of the run. Or both
 
-#CMD/PowerShell Mode for Windows users (no ANSI)
 #Change the index numbers to names, optionally
 #Function to clean unfinished runs
+#Function to list the amount of times a segment has been completed
 #Allow the possibility of loading a file with spaces in its name
-#Comment the code better
 
-#Count the number of segments each run has (not all are finished so they cant all be the same) -- done
-#Count the finished runs -- done
-#Store both the GameTime and RealTime -- done
-#Function to list all runs by time and id -- done
-#Function to list runs in order from best to worst -- done
 #Add total times and total +/- to the compare function -- done
 #Find the longest string to dynamically add padding -- done
 #Load file function -- done
@@ -28,9 +20,13 @@
 import sys
 import os
 import xml.etree.ElementTree as et
-import itertools as it
-f_list = [] #Where all the loaded files are stored
-error = "\033[1;31mERROR\033[0;37m"
+
+f_list = []
+error = "\033[1;31mERROR\033[0;0m"
+red = "\033[31m"
+green = "\033[32m"
+ansi_end = "\033[0m"
+
 print("type \"help\" for help")
 def main():
     #gets a segment object by its id, returns name and time
@@ -42,12 +38,9 @@ def main():
                         for t_id in time.iter("Time"):
                             if (t_id.attrib['id'] == id) & (seg_element.find("Name").text == name):
                                 try:
-                                    self.rta = t_id.find("RealTime").text
-                                    try:
-                                        self.igt = t_id.find("GameTime").text
-                                    except:
-                                        self.igt = "No GameTime"
+                                    self.Time = t_id.find("GameTime").text.strip("0:")
                                     self.Name = seg_element.find("Name").text
+                                    self.sTime = toSeconds(t_id.find("GameTime").text)
                                 except:
                                     #print('ERROR')
                                     continue
@@ -56,55 +49,29 @@ def main():
         def __init__(self, attempt, root):
             self.Segments = [] #A segment object
             self.Maxlen = 0 #Maximum Length!
-            self.Id = attempt.attrib['id']
-
-            #If <Attempt> does not have <RealTime>/<GameTime>:
-            if not len(attempt):
-                self.rta = 'Unfinished'
-                self.igt = 'Unfinished'
-                #print(self.timeRTA)
-
-            #For every <Attempt> that does have <RealTime>/<GameTime>:
-            #Outside of this scope is for every <Attempt>
-            for time in attempt:
-                if time.tag == 'RealTime':
-                    self.rta = time.text
-
-                elif time.tag == 'GameTime':
-                    self.igt = time.text
-
-
-            #Only want to append a segment object if <SegmentHistory> contains a <Time> with its id
-            for segment in root.iter("Segments"):
-                for seg_element in segment.iter("Segment"):
-                    for time in seg_element.iter("SegmentHistory"):
-                        for t_id in time.iter("Time"):
-                            if (t_id.attrib['id'] == self.Id):
-                                self.Segments.append( getSeg(root, seg_element.find("Name").text, self.Id))
-
-                        #Increases Maxlen when it finds a longer string
-                        if len(seg_element.find("Name").text) > self.Maxlen:
-                            self.Maxlen = len(seg_element.find("Name").text)
+            #self.SegNames = []
+            for time in attempt.iter("GameTime"):
+                self.Id = attempt.attrib['id']
+                self.Time = time.text.strip("0:")
+                for segment in root.iter("Segments"):
+                    for seg_element in segment.iter("Segment"):
+                        for name in seg_element.iter("Name"):
+                            self.Segments.append(getSeg(root, name.text, self.Id))
+                            if len(name.text) > self.Maxlen:
+                                self.Maxlen = len(name.text)
 
     class getFileInfo():
         def __init__(self, root):
             self.GameName       =   root.find("GameName").text
             self.CategoryName   =   root.find("CategoryName").text
             self.AttemptCount   =   root.find("AttemptCount").text
-            self.FinishedCount = 0
             self.Runs           =   [] #A run object
             #self.Segments       =
 
             for attempt in root.iter("Attempt"):
-                self.Runs.append( getRuns(attempt, root) )
-                for time in attempt:
-                    #if statement to test for RealTime because there will always be a RealTime
-                    if time.tag == 'RealTime':
-                        self.FinishedCount += 1
-
-            #take a set of all ids
-            #compare them to a set of ids found in the first split, and the next ....
-                #the first segment where an id isnt found is the reset point
+                for time in attempt.iter("GameTime"):
+                    self.Runs.append(getRuns(attempt, root))
+                    #print("Appended: ", getRuns(attempt, root))
 
     class comParse():
         def __init__(self, file):
@@ -116,15 +83,14 @@ def main():
     def comInfo(main):
         print("Game:          ", main.GameName)
         print("Category:      ", main.CategoryName)
-        print(f"Attempts:       {main.FinishedCount}/{main.AttemptCount}")
+        print(f"Attempts:       {len(main.Runs)}/{main.AttemptCount}")
         for run in main.Runs:
             print(f"-- ID: {run.Id} --")
-            print(f"-- Time: {zeroStrip(run.igt)} --")
+            print(f"-- Time: {run.Time} --")
             print("")
-            print("seglen:", len(run.Segments))
             for seg in run.Segments:
                 try:
-                    print(f"{'':5}{seg.Name:<{main.Runs[0].Maxlen}} | {zeroStrip(seg.igt):10}")
+                    print(f"{'':5}{seg.Name:<{main.Runs[0].Maxlen}} | {seg.Time:10}")
                 except:
                     print(f"{'':5}{error}")
             print("")
@@ -132,33 +98,20 @@ def main():
     def comInfoID(main, id):
         print("Game:          ", main.GameName)
         print("Category:      ", main.CategoryName)
-        print(f"Attempts:       {main.FinishedCount}/{main.AttemptCount}")
+        print(f"Attempts:       {len(main.Runs)}/{main.AttemptCount}")
         for run in main.Runs:
             if run.Id == id:
                 print(f"-- ID: {run.Id} --")
-                print(f"-- Time: {zeroStrip(run.igt)} --")
+                print(f"-- Time: {run.Time} --")
                 print("")
                 for seg in run.Segments:
                     try:
-                        print(f"{'':5}{seg.Name:<{main.Runs[0].Maxlen}} | {zeroStrip(seg.igt):10}")
+                        print(f"{'':5}{seg.Name:<{main.Runs[0].Maxlen}} | {seg.Time:10}")
                     except:
                         print(f"{'':5}{error}")
                 print("")
 
-    #Lists runs in order from best to worst
-    def comBest(main):
-        print("Game:          ", main.GameName)
-        print("Category:      ", main.CategoryName)
-        print(f"Attempts:       {main.FinishedCount}/{main.AttemptCount}")
-        sort_list = []
-        for run in main.Runs:
-            if not run.timeIGT == "Unfinished":
-                sort_list.append([toSeconds(run.igt), run.Id, run.igt.strip("0:")])
-
-        for i, run in enumerate(sorted(sort_list), start = 1):
-            print(f"#{i}: {run[2]:<8} | id: {run[1]}")
-
-    #Prints the time difference of each segment of two specified runs
+    #Subtracts the sTime of run_1 and run_2
     def comCompare(file_1, id_1, file_2, id_2):
         diff = 0
         n_diff = 0
@@ -169,58 +122,30 @@ def main():
                     if run_2.Id == id_2:
                         for segment in zip(run_1.Segments, run_2.Segments):
                             try:
-                                diff += toSeconds(segment[0].igt) - toSeconds(segment[1].igt)
+                                diff += segment[0].sTime - segment[1].sTime
                             except:
                                 print(f"{error}: {'Missing Segment!'}")
                             try:
-                                #If its greater than 0, make the text red, else make it green
-                                if (round(toSeconds(segment[0].igt) - toSeconds(segment[1].igt))) > 0:
-                                    p_diff += toSeconds(segment[0].igt) - toSeconds(segment[1].igt)
-                                    print(f"{segment[0].Name:<{run_1.Maxlen}}|{zeroStrip(segment[0].igt):<12} \033[1;31m{round(toSeconds(segment[0].igt) - toSeconds(segment[1].igt), 2):>7}\033[0;37m {zeroStrip(segment[1].igt):>12}")
+                                if (round(segment[0].sTime - segment[1].sTime)) > 0:
+                                    p_diff += segment[0].sTime - segment[1].sTime
+                                    print(f"{segment[0].Name:<{run_1.Maxlen}}|{segment[0].Time:<12} \033[1;31m{round(segment[0].sTime - segment[1].sTime, 2):>7}\033[0;37m {segment[1].Time:>12}")
                                 else:
-                                    n_diff += toSeconds(segment[0].igt) - toSeconds(segment[1].igt)
-                                    print(f"{segment[0].Name:<{run_1.Maxlen}}|{zeroStrip(segment[0].igt):<12} \033[1;32m{round(toSeconds(segment[0].igt) - toSeconds(segment[1].igt), 2):>7}\033[0;37m {zeroStrip(segment[1].igt):>12}")
+                                    n_diff += segment[0].sTime - segment[1].sTime
+                                    print(f"{segment[0].Name:<{run_1.Maxlen}}|{segment[0].Time:<12} \033[1;32m{round(segment[0].sTime - segment[1].sTime, 2):>7}\033[0;37m {segment[1].Time:>12}")
                             except:
                                 print(f"{error}: {'Missing Segment!'}")
                         print("--" * run_1.Maxlen)
                         if diff > 0:
-                            print(f"{'':{run_1.Maxlen}}|{zeroStrip(run_1.igt):<12} \033[1;31m{round(diff, 2):>7}\033[0;37m {zeroStrip(run_2.igt):>12}")
+                            print(f"{'':{run_1.Maxlen}}|{run_1.Time:<12} \033[1;31m{round(diff, 2):>7}\033[0;37m {run_2.Time:>12}")
                         else:
-                            print(f"{'':{run_1.Maxlen}}|{zeroStrip(run_1.igt):<12} \033[1;32m{round(diff, 2):>7}\033[0;37m {zeroStrip(run_2.igt):>12}")
+                            print(f"{'':{run_1.Maxlen}}|{run_1.Time:<12} \033[1;32m{round(diff, 2):>7}\033[0;37m {run_2.Time:>12}")
                         print(f"{'':{run_1.Maxlen}}|{'':<12} \033[1;31m{round(p_diff, 2):>7}\033[0;37m")
                         print(f"{'':{run_1.Maxlen}}|{'':<12} \033[1;32m{round(n_diff, 2):>7}\033[0;37m")
 
-    def comBetterCompare(f1, id1, f2, id2):
-        #compare the length of f1 and f2
-        diff = 0
-        ndiff = 0
-        pdiff = 0
-        for r1, r2 in it.zip_longest(f1.Runs, f2.Runs):
-            for s1, s2 in it.zip_longest(r1.Segments, r2.Segments):
-                try:
-                    diff += toSeconds(s1.igt) - toSeconds(s2.igt)
-                except:
-                    print(f"{error}: {'Missing Segment!'}")
-                try:
-                    if (round(toSeconds(s1.igt) - toSeconds(s2.igt))) > 0:
-                        pdiff += toSeconds(s1.igt) - toSeconds(s2.igt)
-                        print(f"{s1.Name:<{run_1.Maxlen}}|{zeroStrip(s1.igt):<12} \033[1;31m{round(toSeconds(s1.igt) - toSeconds(s2.igt), 2):>7}\033[0;37m {zeroStrip(s2.igt):>12}")
-                    else:
-                        ndiff += round(toSeconds(s1.igt) - toSeconds(s2.igt))
-                        print(f"{s1.Name:<{run_1.Maxlen}}|{zeroStrip(s1.igt):<12} \033[1;32m{round(toSeconds(s1.igt) - toSeconds(s2.igt), 2):>7}\033[0;37m {zeroStrip(s2.igt):>12}")
-                except:
-                    print(f"{error}: {'Missing Segment!'}")
-
-
     #translates human readable time to pure seconds
-    #not to be used with a time string that has already been stripped!
     def toSeconds(string):
         x = string.split(':')
         return int(x[0])*3600 + int(x[1])*60 + float(x[2])
-
-    # using .strip() doesn't work in an f-string for some reason, so this is my solution
-    def zeroStrip(string):
-        return string.strip("0:")
 
     #Command Line Interface
     command = input("\033[92mcomparator\033[0m>")
@@ -233,7 +158,6 @@ def main():
         #Loads a file
         case ["load", file]:
             try:
-                print(f"\033[5mLoading {file}\033[25m")
                 f_list.append(comParse(file))
                 print(f"Loaded {file} at index {len(f_list) - 1}")
             except:
@@ -261,43 +185,32 @@ def main():
                 print("IDs:")
                 print("_________________________")
                 for r in f_list[int(index)].main.Runs:
-                    print(f"{r.Id}: {r.timeIGT}")
+                    print(r.Id)
             except:
                 print("List index out of range")
 
-        #List command
-        case ["list", index, option]:
+        #Prints a run specified by id
+        case ["info", index, id]:
+            try:
+                comInfoID(f_list[int(index)].main, id)
+            except:
+                print(f"File \"{index}\" not yet loaded.")
 
-            match option:
-                case "-a": #-a for all
-                    try:
-                        comInfo(f_list[int(index)].main)
-                    except:
-                        print(f"File \"{index}\" not yet loaded.")
+        #Prints all runs in a loaded file
+        case ["info", index]:
+            try:
+                comInfo(f_list[int(index)].main)
+            except:
+                print(f"File \"{index}\" not yet loaded.")
 
-                case "-b": #-b for best to worst
-                    try:
-                        comBest(f_list[int(index)].main)
-                    except:
-                        print(f"File \"{index}\" not yet loaded.")
-
-                case option:#list a specific runs segments
-                    try:
-                        comInfoID(f_list[int(index)].main, option)
-                    except:
-                        print(f"File \"{index}\" not yet loaded.")
-
-        #Command to compare one runs segment times to anothers
         case ["compare", file_1, id_1, file_2, id_2]:
             comCompare(f_list[int(file_1)].main, id_1, f_list[int(file_2)].main, id_2)
 
-        #lists all files in a folder
         case ["dir"]:
             for file in os.listdir():
                 print(file)
             print('')
 
-        #lists all files in a folder
         case ["ls"]:
             for file in os.listdir():
                 print(file)
@@ -322,16 +235,15 @@ def main():
             print("     ids [index]")
             print("         -prints all valid run IDs in a file")
             print('')
-            print("     list [index] *[option/id]")
+            print("     info [index] *[id]")
             print("         -lists all the segments in a run by the ID specified.")
-            print("         -a: list all runs with all segments")
-            print("         -b: list the runs in order from best to worst")
+            print("         -if no ID specified, lists all segments for all runs in a file.")
 
 
 
         #test case for me to test things
-        case["test", f1, id1, f2, id2]:
-            comBetterCompare(f_list[int(f1)].main, id1, f_list[int(f2)].main, id2)
+        case["test", test]:
+            print(0 != 1)
 
 
 
