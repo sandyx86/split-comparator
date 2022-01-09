@@ -21,24 +21,23 @@ def main():
 
             case ["list", option, file]:
                 match [option, file]:
-                    case ["id", file]:
-                        for run in fn.load_file(file).attempts:
-                            print(run.id)
-
                     case ["times", file]:
                         for run in fn.load_file(file).attempts:
-                            print(run.rta, run.id)
+                            print(run.igt, run.id)
 
                     case ["comparison", file]:
                         for run in fn.load_file(file).comparisons:
                             print(run.id)
 
                     case ["best", file]:
-                        for segment in fn.load_file(file).golds.segments:
-                            print(segment.name, segment.rta)
-                            
+                        for run in fn.rankedRuns(fn.load_file(file).attempts):
+                            print(
+                                fn.zeroStrip(run[1]).ljust(10, ' '),
+                                "id:",
+                                run[2]
+                            )
                     case _:
-                        print("Unmatched")
+                        print("Unrecognized Command")
 
             case ["compare", file1, id1, file2, id2]:
                 for run in fn.load_file(file1).attempts:
@@ -50,8 +49,21 @@ def main():
                         y = run
 
                 fn.runCompare(x, y)
+            
+            #may be modified later to take from two files
+            case ["hybrid", file, id1, id2]:
+                for run in fn.load_file(file).attempts:
+                    if id1 == run.id:
+                        x = run
+                    
+                    if id2 == run.id:
+                        y = run
+                    
+                for segment in fn.createHybrid(x, y):
+                    print(segment)
+
             case _:
-                print("No Match")
+                print("Unrecognized Command")
         
         cmdloop()
     

@@ -8,6 +8,7 @@ green       = "\033[32m"
 clear       = "\033[0m"
 
 ## Functions that extract data from the lss file ##
+
 def load_file(file):
     file_object = cl.File(file)
     for attempt in findAttempts(file_object):
@@ -19,7 +20,6 @@ def load_file(file):
     return file_object
 
 #returns a list of all comparisons in a file
-#fix duplicate comparisons
 def findComparisons(file):
     comparison_list = []
     for segment in file.root.iter("Segment"):
@@ -234,7 +234,7 @@ def splitToSegment(splits):
     zero = 0
     for split in splits:
         segments.append(toSeconds(split) - zero)
-        zero = toSeconds(split)
+        zero += toSeconds(split)
     return segments
 
 
@@ -244,7 +244,7 @@ def segmentToSplit(segments):
     zero = 0
     for segment in segments:
         splits.append(toSeconds(segment) + zero)
-        zero = toSeconds(segment)
+        zero += toSeconds(segment)
     return splits
     
 #find a clean way to write this spaghetti code
@@ -314,8 +314,36 @@ def runCompare(run_1, run_2):
             round(delta_run.t_igt, 2)
         ).rjust(len(max(segment_list, key=len)) + 23, ' ')
     )
-        
+
+#returns a list of all completed runs in order from least to greatest time
+def rankedRuns(runs):
+    attempt_list = []
+    for run in runs:
+        if not run.igt == "None":
+            attempt_list.append(
+                (toSeconds(run.igt), run.igt, run.id)
+            )
+    return sorted(attempt_list)
+
+def createHybrid(run_1, run_2):
+    segments = []
+    for index, segment in enumerate(run_1.segments):
+        segments.append(segment.igt if toSeconds(segment.igt) < toSeconds(run_2.segments[index].igt) else run_2.segments[index].igt)
+    return timeFormatter(
+        segmentToSplit(
+            segments
+        )
+    )
+
+#formats floats to time
+def timeFormatter(times):
+    time_list = []
+    for time in times:
+        time_list.append(newMinutes(float(time)))
+    return time_list
+
 def toSeconds(string):
+    #print("passed:", string)
     if string:
         x = string.split(':')
         return int(x[0])*3600 + int(x[1])*60 + float(x[2])
@@ -327,6 +355,12 @@ def toMinutes(num):
     theSeconds = num % 60
     return f"{theMinutes:02}:{round(theSeconds, 2):05}"
 
+#returns a string of time in the same format as in the lss file
+def newMinutes(num):
+    minutes, seconds = divmod(num, 60)
+    hours, minutes = divmod(minutes, 60)
+    return f"{int(hours):02}:{int(minutes):02}:{round(seconds, 2):010.7f}"
+
 def zeroStrip(string):
     return string.strip("0:")
 
@@ -335,9 +369,6 @@ def passCheck(run):
         print(segment.rta)
         pass
 
-
-                
-        
     
 
 
