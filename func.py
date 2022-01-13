@@ -1,234 +1,81 @@
 import xml.etree.ElementTree as et
 import os
 
-import classes as cl
-
 red         = "\033[31m"
 green       = "\033[32m"
 clear       = "\033[0m"
 
 ## Functions that extract data from the lss file ##
 
-def load_file(file):
-    file_object = cl.File(file)
-    for attempt in findAttempts(file_object):
-        file_object.attempts.append(buildRun(file_object, attempt))
-    
-    for comparison in findComparisons(file_object):
-        file_object.comparisons.append(buildComparison(file_object, comparison))
-    
-    return file_object
-
-#returns a list of all comparisons in a file
+## Finders ##
+#returns a list of all comparison names the file passed
 def findComparisons(file):
-    comparison_list = []
-    for segment in file.root.iter("Segment"):
-        for comparison in segment.iter("SplitTime"):
-            if comparison.attrib['name'] in comparison_list:
-                break
-            comparison_list.append(comparison.attrib['name'])
-    return comparison_list
+    return {comparison.attrib['name'] for comparison in et.parse(file).getroot().iter("SplitTime")}
 
-#returns a list of all ids in the file passed
-def findAttempts(file):
-    attempt_list = []
-    for attempt in file.root.iter("Attempt"):
-        attempt_list.append(attempt.attrib['id'])
-    
-    #print("Attempts found:", len(attempt_list))
-    return attempt_list
+#returns a list of all attempt ids in the file passed
+def findAttemptIDs(file):
+    return [attempt.attrib['id'] for attempt in et.parse(file).getroot().iter("Attempt")]
 
-#returns a list of all segments in the file passed
-def findSegments(file):
-    segment_list = []
-    for segment in file.root.iter("Name"):
-        segment_list.append(segment.text)
-        #print(segment.text)
-    
-    #print("Segments Found:", len(segment_list))
-    return segment_list
+#returns a list of all segment names in the file passed
+def findSegments(root):
+    return [segment.text for segment in root.iter("Name")]
 
-#returns a run object of the name of the comparison passed
-def buildComparison(file, name):
-    run_object = cl.Run()
-    run_object.id = name
+#returns a list of all completed runs' ids, and their times
+def findCompleted(file, method=None):
+    if method == "rta":
+        return [
+            (attempt.attrib['id'], time.text)
+        for attempt in et.parse(file).getroot().iter("Attempt") 
+        for time in attempt.iter("RealTime")
+    ]
 
-    for segment in findSegments(file):
-        run_object.segments.append(buildComparisonSegment(file, segment, name))
-        #print("Apped:", buildComparisonSegment(file, segment, name).rta)
-    
-    return run_object
+    elif method == "igt":
+        return [
+            (attempt.attrib['id'], time.text)
+        for attempt in et.parse(file).getroot().iter("Attempt")
+        for time in attempt.iter("GameTime")
+    ]
 
-#returns a run object of the best segments in a file
-def buildSumOfBest(file):
-    run_object = cl.Run()
-    run_object.id = "Sum of Best"
-
-    for segment in findSegments(file):
-        run_object.segments.append(buildBestSegment(file, segment))
-    
-    #a run object has an rta variable so just put he sum of best in self.rta
-    #need a function to convert split times to segment times + vice versa
-    
-    return run_object
-
-#returns a run object of the id passed
-def buildRun(file, _id):
-    run_object = cl.Run()
-    run_object.id = _id
-
-    for attempt in file.root.iter("Attempt"):
-        if _id == attempt.attrib['id']:
-            if len(attempt) == 2:
-                run_object.rta = attempt[0].text
-                run_object.igt = attempt[1].text
-            elif len(attempt) == 1:
-                run_object.rta = attempt[0].text
-                run_object.igt = "None"
-            else:
-                run_object.rta = "None"
-                run_object.igt = "None"
-    
-    for segment in findSegments(file):
-        run_object.segments.append(buildSegment(file, segment, _id))
-
-    #passCheck(run_object)
-    return run_object
-
-#returns a segment object of the split name and id passed
-def buildSegment(file, name, _id):
-    segment_object = cl.Segment()
-    segment_object.name = name
-
-    for segment in file.root.iter("Segment"):
-        if name == segment.find("Name").text:
-            for time in segment.iter("Time"):
-                if _id == time.attrib['id']:
-                    if len(time) == 2:
-                        segment_object.rta = time[0].text
-                        segment_object.igt = time[1].text
-                    elif len(time) == 1:
-                        segment_object.rta = time[0].text
-                        segment_object.igt = "None"
-                    elif len(time) == 0:
-                        segment_object.rta = "None"
-                        segment_object.igt = "None"       
-                    else:
-                        print("what")
-
-    #print(segment_object.name, segment_object.igt) 
-    return segment_object
-
-#returns a list of ids for which a segment has recorded times for
-def findSegmentIDs(file, name):
-    seg_list = []
-    for segment in file.root.iter("Segment"):
-        if name == segment.find("Name").text:
-            for time in segment.iter("Time"):
-                seg_list.append(time.attrib['id'])
-    return seg_list
-
-#returns a segment object of the split name and comparison name passed
-def buildComparisonSegment(file, splitname, name):
-    segment_object = cl.Segment()
-    segment_object.name = splitname
-
-    for segment in file.root.iter("Segment"):
-        # if splitname == <Name></Name>
-        if splitname == segment[0].text: 
-            
-            #for splittime in <SplitTimes></SplitTimes>
-            for split_time in segment[2]:
-                for time in split_time.iter("SplitTime"):
-                    if name == split_time.attrib['name']:
-                        if len(split_time) == 2:
-                            segment_object.rta = time[0].text
-                            segment_object.igt = time[1].text
-                        elif len(split_time) == 1:
-                            segment_object.rta = time[0].text
-                            segment_object.igt = "None"
-                        else:
-                            segment_object.rta = "None"
-                            segment_object.igt = "None"
-    return segment_object
-
-#returns a segment object of the best segment of the split name passed
-def buildBestSegment(file, splitname):
-    segment_object = cl.Segment()
-    segment_object.name = splitname
-
-    for segment in file.root.iter("Segment"):
-        if splitname == segment[0].text:
-            for time in segment.iter("BestSegmentTime"):
-                if len(time) == 2:
-                    segment_object.rta = time[0].text
-                    segment_object.igt = time[1].text
-                elif len(time) == 1:
-                    segment_object.rta = time[0].text
-                    segment_object.igt = "None"
-                else:
-                    segment_object.rta = "None"
-                    segment_object.igt = "None"
-    return segment_object
-
-## Functions that operate on the data extracted ##
-
-#Comparison function
-#compare the whole object, find rta and igt and store it
-#pass two segment objects to this func
-def buildDeltaSegment(name, s1, s2):
-    dsegment = cl.DeltaSegment()
-    dsegment.name = name
-    dsegment.rta = toSeconds(s1.rta) - toSeconds(s2.rta)
-    dsegment.igt = toSeconds(s1.igt) - toSeconds(s2.igt)
-    return dsegment
-
-def buildDeltaRun(run_1, run_2):
-    drun = cl.DeltaRun()
-    
-    #all return empty strings
-    #passCheck(run_1)
-    #passCheck(run_2)
-
-    for seg_1, seg_2 in zip(run_1.segments, run_2.segments):
-        drun.segments.append(buildDeltaSegment(seg_1.name, seg_1, seg_2))
-
-    for segment in drun.segments:
-        if segment.rta > 0:
-            drun.p_rta = float(drun.p_rta) + float(segment.rta)
-        else:
-            drun.n_rta = float(drun.n_rta) + float(segment.rta)
-        
-        if segment.igt > 0:
-            drun.p_igt = float(drun.p_rta) + float(segment.igt)
-        else:
-            drun.n_igt = float(drun.n_rta) + float(segment.igt)
-
-    drun.t_rta = totalAdder(drun.segments, 'rta')
-    drun.t_igt = totalAdder(drun.segments, 'igt')
-    #make a totalAdder function
-    
-    return drun
-
-#for use with buildDeltaRun(), the segment times should already be floats / doubles
-def totalAdder(seg_list, method):
+#returns a list of all segment times recorded for the specified segment
+def findRecordedSegmentTimes(root, name, method=None):
     if method == 'rta':
-        adder = []
-        for segment in seg_list:
-            adder.append(segment.rta)
-        added = sum(adder)
-        return added
-    
-    if method == 'igt':
-        adder = []
-        for segment in seg_list:
-            adder.append(segment.igt)
-        added = sum(adder)
-        return added
-    
-    return
+        return [
+            tag.text
+            for segment in root.iter("Segment")
+            for time in segment.iter("Time")
+            for tag in time.iter("RealTime")
+            if segment.find("Name").text == name
+        ]
+    else:
+        return [
+            tag.text
+            for segment in root.iter("Segment")
+            for time in segment.iter("Time")
+            for tag in time.iter("GameTime")
+            if segment.find("Name").text == name
+        ]
+
+#returns a list of all segment times recorded for the specified attempt id
+def findRunSegments(root, _id, method=None):
+    if method == 'rta':
+        return [
+            (segment.find("Name").text, tag.text)
+            for segment in root.iter("Segment")
+            for time in segment.iter("Time")
+            for tag in time.iter("RealTime")
+            if time.get('id') == _id
+        ]
+    else:
+        return [
+            (segment.find("Name").text, tag.text)
+            for segment in root.iter("Segment")
+            for time in segment.iter("Time")
+            for tag in time.iter("GameTime")
+            if time.get('id') == _id
+        ]
 
 #pass a list of split times, return a list of segment times
+#this one needs changed
 def splitToSegment(splits):
     segments = []
     zero = 0
@@ -237,111 +84,98 @@ def splitToSegment(splits):
         zero += toSeconds(split)
     return segments
 
-
 #pass a list of segment times, return a list of split times
+#segments must already be converted to seconds
 def segmentToSplit(segments):
-    splits = []
-    zero = 0
-    for segment in segments:
-        splits.append(toSeconds(segment) + zero)
-        zero += toSeconds(segment)
-    return splits
-    
-#find a clean way to write this spaghetti code
-def runCompare(run_1, run_2):
-    delta_run = buildDeltaRun(run_1, run_2)
-
-    #for determining the length of the longest segment name
-    segment_list = []
-    for segment in run_1.segments:
-        segment_list.append(segment.name)
-    
-    #print the comparison of each segment
-    for index, segment in enumerate(run_1.segments):
-        print(
-            segment.name.ljust(len(max(segment_list, key=len)), ' '),
-            zeroStrip(
-                segment.igt
-            ).ljust(10, ' '),
-
-            green if delta_run.segments[index].igt <= 0 else red,
-
-            str(
-                round(delta_run.segments[index].igt, 2)
-            ).rjust(10, ' '),
-
-            clear,
-            
-            zeroStrip(
-                run_2.segments[index].igt
-            ).rjust(15, ' ')
-        )
-    
-    print("-" * (40 + len(max(segment_list, key=len))))
-
-    #print the sum of all positive splits
-    print(
-        "Total".ljust(len(max(segment_list, key=len)), ' '),
-        zeroStrip(
-            run_1.igt
-        ).ljust(10, ' '),
-        
-        red,
-
-        str(
-            round(delta_run.p_igt, 2)
-        ).rjust(10, ' '),
-        
-        clear,
-
-        zeroStrip(
-            run_2.igt
-        ).rjust(15, ' ')
-    )
-
-    #print the sum of all negative splits
-    print(
-        green,
-        str(
-            round(delta_run.n_igt, 2)
-        ).rjust(len(max(segment_list, key=len)) + 22, ' '),
-        clear
-    )
-
-    #print the sum of all positive and negative splits
-    print(
-        str(
-            round(delta_run.t_igt, 2)
-        ).rjust(len(max(segment_list, key=len)) + 23, ' ')
+    return allMinutes(
+        [round(sum(segments[0:index+1]), 2) for index, _ in enumerate(segments)]
     )
 
 #returns a list of all completed runs in order from least to greatest time
-def rankedRuns(runs):
-    attempt_list = []
-    for run in runs:
-        if not run.igt == "None":
-            attempt_list.append(
-                (toSeconds(run.igt), run.igt, run.id)
-            )
-    return sorted(attempt_list)
-
-def createHybrid(run_1, run_2):
-    segments = []
-    for index, segment in enumerate(run_1.segments):
-        segments.append(segment.igt if toSeconds(segment.igt) < toSeconds(run_2.segments[index].igt) else run_2.segments[index].igt)
-    return timeFormatter(
-        segmentToSplit(
-            segments
+def listBest(file, string):
+    return [
+        (zeroStrip(toMinutes(sort[0])), sort[1])
+        for sort in sorted(
+            [(toSeconds(attempt[1]), attempt[0]) for attempt in findCompleted(file, method=string)]
         )
-    )
+    ]
 
-#formats floats to time
-def timeFormatter(times):
-    time_list = []
-    for time in times:
-        time_list.append(newMinutes(float(time)))
-    return time_list
+def allMinutes(the_list):
+    return [toMinutes(time) for time in the_list]
 
+def allSeconds(the_list):
+    return [toSeconds(time[1]) for time in the_list]
+
+#returns a list of the lower of two numbers in two zipped lists
+def lowerSegment(l1, l2):
+    return [x if x < y else y for x, y in zip(l1, l2)]
+
+#returns a list of the better of each segment in two runs
+def fastHybrid(root, id_1, id_2, method):
+    run_1 = findRunSegments(root, id_1, method)
+    run_2 = findRunSegments(root, id_2, method)
+    segments = findSegments(root)
+    length = len(max(segments, key=len))
+    hybrid = lowerSegment(allSeconds(run_1), allSeconds(run_2))
+
+    for index, segment in enumerate(segmentToSplit(hybrid)):
+        print(segments[index].ljust(length, ' '), zeroStrip(segment))
+
+def fastCompare(root, id_1, id_2, method=None):
+    run_1 = findRunSegments(root, id_1, method)
+    run_2 = findRunSegments(root, id_2, method)
+    segments = findSegments(root) #just to get the length of the longest segment
+
+    for x, y in zip(run_1, run_2):
+        diff = toSeconds(x[1]) - toSeconds(y[1])
+        print(
+            x[0].ljust(len(max(segments, key=len)), ' '), "|",
+            zeroStrip(x[1]).ljust(10, ' '),
+            green if diff <= 0 else red,
+            str(round(diff, 2)).rjust(10, ' '),
+            clear,
+            zeroStrip(y[1]).rjust(15, ' ')
+        )
+
+#counts how many resets each segment has in a file and returns a list
+#this one needs changed
+def fastReset(file):
+    tree = et.parse(file)
+    root = tree.getroot()
+
+    idlist = [attempt.attrib['id'] for attempt in root.iter("Attempt")]
+
+    rlist = [
+        segment.find("Name").text
+        for segment in root.iter("Segment")
+        for segmenthistory in segment.iter("SegmentHistory")
+        for time in segmenthistory.iter("Time")
+    ]
+
+    clist = [
+        (segment, rlist.count(segment)) 
+        for segment in findSegments(file)
+    ]
+
+    #append non 0 count resets here
+    dlist = []
+        
+    a = len(idlist)
+    for count in clist:
+        b = count[1]
+        c = abs(a - b)
+        a = a - c
+
+        dlist.append((c, count[0]))
+    
+    c = 0
+    for something in dlist:
+        c += something[0]
+    print(c)
+
+    return sorted(dlist, reverse=1)
+
+#turns a string of time into a float
 def toSeconds(string):
     #print("passed:", string)
     if string:
@@ -349,26 +183,13 @@ def toSeconds(string):
         return int(x[0])*3600 + int(x[1])*60 + float(x[2])
     return 0
 
-#this can be improved with if else
-def toMinutes(num):
-    theMinutes = int(num / 60)
-    theSeconds = num % 60
-    return f"{theMinutes:02}:{round(theSeconds, 2):05}"
-
 #returns a string of time in the same format as in the lss file
-def newMinutes(num):
+def toMinutes(num):
     minutes, seconds = divmod(num, 60)
     hours, minutes = divmod(minutes, 60)
     return f"{int(hours):02}:{int(minutes):02}:{round(seconds, 2):010.7f}"
 
+#cuts the leading and trailing zeroes off of a string of time
 def zeroStrip(string):
-    return string.strip("0:")
-
-def passCheck(run):
-    for segment in run.segments:
-        print(segment.rta)
-        pass
-
-    
-
-
+    if string:
+        return string.strip("0:")

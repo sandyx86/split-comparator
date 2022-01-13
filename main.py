@@ -1,5 +1,6 @@
 import sys, os
 import func as fn
+import xml.etree.ElementTree as et
 
 red         = "\033[31m"
 green       = "\033[32m"
@@ -19,48 +20,37 @@ def main():
             case ["quit"]:
                 sys.exit()
 
-            case ["list", option, file]:
-                match [option, file]:
-                    case ["times", file]:
-                        for run in fn.load_file(file).attempts:
-                            print(run.igt, run.id)
+            case["best", file, method]:
+                for a in fn.listBest(file, method):
+                    print(a[0], ' id:', a[1])
 
-                    case ["comparison", file]:
-                        for run in fn.load_file(file).comparisons:
-                            print(run.id)
-
-                    case ["best", file]:
-                        for run in fn.rankedRuns(fn.load_file(file).attempts):
-                            print(
-                                fn.zeroStrip(run[1]).ljust(10, ' '),
-                                "id:",
-                                run[2]
-                            )
-                    case _:
-                        print("Unrecognized Command")
-
-            case ["compare", file1, id1, file2, id2]:
-                for run in fn.load_file(file1).attempts:
-                    if id1 == run.id:
-                        x = run
-                
-                for run in fn.load_file(file2).attempts:
-                    if id2 == run.id:
-                        y = run
-
-                fn.runCompare(x, y)
+            #compare two runs
+            case["compare", file, id_1, id_2, method]:
+                tree = et.parse(file)
+                root = tree.getroot()
+                fn.fastCompare(root, id_1, id_2, method)
             
             #may be modified later to take from two files
-            case ["hybrid", file, id1, id2]:
-                for run in fn.load_file(file).attempts:
-                    if id1 == run.id:
-                        x = run
-                    
-                    if id2 == run.id:
-                        y = run
-                    
-                for segment in fn.createHybrid(x, y):
-                    print(segment)
+            case ["hybrid", file, id_1, id_2, method]:
+                tree = et.parse(file)
+                root = tree.getroot()
+
+                fn.fastHybrid(root, id_1, id_2, method)
+            #show how many times a segment has been reset on (miscounting bug?)
+            case ["resets", file]:
+                slist = fn.findSegments(file)
+                for segment in fn.fastReset(file):
+                    print(
+                        segment[1].ljust(len(max(slist, key=len)), ' '),
+                        "-",
+                        segment[0]
+                    )
+
+            case ["test", file]:
+                tree = et.parse(file)
+                root = tree.getroot()
+
+                fn.fastCompare(root, '110', '140', 'igt')
 
             case _:
                 print("Unrecognized Command")
