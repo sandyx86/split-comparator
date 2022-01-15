@@ -178,7 +178,27 @@ def fastCompare(root, id_1, id_2, method=None):
         zeroStrip(findTime(root, id_2, method)).rjust(28, ' '),
     )
 
+def fastDCompare(root_1, id_1, root_2, id_2, method=None):
+    run_1 = findRunSegments(root_1, id_1, method)
+    run_2 = findRunSegments(root_2, id_2, method)
+    segments = findSegments(root_1) #just to get the length of the longest segment
 
+    for x, y in zip(run_1, run_2):
+        diff = toSeconds(x[1]) - toSeconds(y[1])
+        print(
+            x[0].ljust(len(max(segments, key=len)), ' '), "|",
+            zeroStrip(x[1]).ljust(10, ' '),
+            green if diff <= 0 else red,
+            str(round(diff, 2)).rjust(10, ' '),
+            clear,
+            zeroStrip(y[1]).rjust(15, ' ')
+        )
+    print("\\"* (len(max(segments, key=len)) + 42))
+    print(
+        "Total:".ljust(len(max(segments, key=len)), ' '), "|",
+        zeroStrip(findTime(root_1, id_1, method)).ljust(10, ' '),
+        zeroStrip(findTime(root_2, id_2, method)).rjust(28, ' '),
+    )
 
 #print how many times each segment has been reset on
 def fastResetCounter(root):

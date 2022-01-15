@@ -31,6 +31,12 @@ def main():
                 root = et.parse(file).getroot()
                 fn.fastCompare(root, id_1, id_2, method)
             
+            case["dcompare", file_1, id_1, file_2, id_2, method]:
+                root_1 = et.parse(file_1).getroot()
+                root_2 = et.parse(file_2).getroot()
+
+                fn.fastDCompare(root_1, id_1, root_2, id_2, method)
+            
             #may be modified later to take from two files
             case ["hybrid", file, id_1, id_2, method]:
                 root = et.parse(file).getroot()
@@ -42,6 +48,9 @@ def main():
                 root = et.parse(file).getroot()
 
                 print(fn.fastResetCounter(root))
+            
+            case ["variance", file]:
+                pass
             
             case["help"]:
                 print(
