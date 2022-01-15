@@ -7,4 +7,9 @@ Functions:
   - Create a hybrid run from the better segments of two runs.
   - Create a list of all your runs in order from fastest to slowest, and show their IDs.
 
-If you've skipped a segment in a run, the comparison tool will also skip the segment in its comparisons
+If you've skipped a segment in a run, the comparison tool will also skip the segment in its comparisons.
+
+Need Python 3.10, it's a CLI program and uses ANSI color codes so
+you may want a terminal other than cmd or powershell, or just
+make the green red and clear variables empty strings so that
+it will look right in cmd.
