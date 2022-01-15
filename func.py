@@ -1,3 +1,4 @@
+from types import NoneType
 import xml.etree.ElementTree as et
 import os
 
@@ -13,8 +14,8 @@ def findComparisons(file):
     return {comparison.attrib['name'] for comparison in et.parse(file).getroot().iter("SplitTime")}
 
 #returns a list of all attempt ids in the file passed
-def findAttemptIDs(file):
-    return [attempt.attrib['id'] for attempt in et.parse(file).getroot().iter("Attempt")]
+def findAttemptIDs(root):
+    return [attempt.attrib['id'] for attempt in root.iter("Attempt")]
 
 #returns a list of all segment names in the file passed
 def findSegments(root):
@@ -92,25 +93,19 @@ def segmentToSplit(segments):
     )
 
 #returns a list of all completed runs in order from least to greatest time
-def listBest(file, string):
+def listBest(root, string):
     return [
         (zeroStrip(toMinutes(sort[0])), sort[1])
         for sort in sorted(
-            [(toSeconds(attempt[1]), attempt[0]) for attempt in findCompleted(file, method=string)]
+            [(toSeconds(attempt[1]), attempt[0]) for attempt in findCompleted(root, method=string)]
         )
     ]
-
-def allMinutes(the_list):
-    return [toMinutes(time) for time in the_list]
-
-def allSeconds(the_list):
-    return [toSeconds(time[1]) for time in the_list]
 
 #returns a list of the lower of two numbers in two zipped lists
 def lowerSegment(l1, l2):
     return [x if x < y else y for x, y in zip(l1, l2)]
 
-#returns a list of the better of each segment in two runs
+#prints a list of the better of each segment in two runs
 def fastHybrid(root, id_1, id_2, method):
     run_1 = findRunSegments(root, id_1, method)
     run_2 = findRunSegments(root, id_2, method)
@@ -121,6 +116,8 @@ def fastHybrid(root, id_1, id_2, method):
     for index, segment in enumerate(segmentToSplit(hybrid)):
         print(segments[index].ljust(length, ' '), zeroStrip(segment))
 
+#prints a comparison of two runs
+#may be modified to optionally show split times instead of segment times
 def fastCompare(root, id_1, id_2, method=None):
     run_1 = findRunSegments(root, id_1, method)
     run_2 = findRunSegments(root, id_2, method)
@@ -137,43 +134,52 @@ def fastCompare(root, id_1, id_2, method=None):
             zeroStrip(y[1]).rjust(15, ' ')
         )
 
-#counts how many resets each segment has in a file and returns a list
-#this one needs changed
-def fastReset(file):
-    tree = et.parse(file)
-    root = tree.getroot()
+#return the segment in which a run was reset on
+def findResetPoint(root, _id):
+    one = findSegments(root)[0]
 
-    idlist = [attempt.attrib['id'] for attempt in root.iter("Attempt")]
-
-    rlist = [
-        segment.find("Name").text
-        for segment in root.iter("Segment")
-        for segmenthistory in segment.iter("SegmentHistory")
-        for time in segmenthistory.iter("Time")
+    y = [
+        segment for segment in reversed(
+            [segment for segment in root.iter("Segment")]
+        )
     ]
 
-    clist = [
-        (segment, rlist.count(segment)) 
-        for segment in findSegments(file)
+    x = [
+        y[index-1].find("Name").text
+        for index, segment in enumerate(y) 
+        for time in segment.iter("Time") 
+        if time.get("id") == _id
     ]
 
-    #append non 0 count resets here
-    dlist = []
-        
-    a = len(idlist)
-    for count in clist:
-        b = count[1]
-        c = abs(a - b)
-        a = a - c
+    #the list that x and y create isn't 100% perfect,
+    #[index - 1] works for every segment besides the first one in the list
+    #because (index = -1) returns the last item in a list
+    #which would be the first segment on a finished run, since the list is reversed
+    #so these two if statements fix that
 
-        dlist.append((c, count[0]))
-    
-    c = 0
-    for something in dlist:
-        c += something[0]
-    print(c)
+    #if x[0] returns None, return the first segment
+    if not len(x):
+        return one
 
-    return sorted(dlist, reverse=1)
+    #if x[0] returns the name of the first segment, don't return it
+    if x[0] != one:
+            return x[0]
+    return
+
+#print how many times each segment has been reset on
+def fastResetCounter(root):
+    segments = findSegments(root)
+    resets = [findResetPoint(root, _id) for _id in findAttemptIDs(root)]
+    counted = [resets.count(segment) for segment in segments]
+    for index, count in enumerate(sorted(counted, reverse=1)):
+        print(
+            segments[index].ljust(len(max(segments, key=len)), ' '), 
+            count
+        )
+    print(
+        "Total:".ljust(len(max(segments, key=len)), ' '),
+        sum(counted)
+    )
 
 #turns a string of time into a float
 def toSeconds(string):
@@ -188,6 +194,12 @@ def toMinutes(num):
     minutes, seconds = divmod(num, 60)
     hours, minutes = divmod(minutes, 60)
     return f"{int(hours):02}:{int(minutes):02}:{round(seconds, 2):010.7f}"
+
+def allMinutes(the_list):
+    return [toMinutes(time) for time in the_list]
+
+def allSeconds(the_list):
+    return [toSeconds(time[1]) for time in the_list]
 
 #cuts the leading and trailing zeroes off of a string of time
 def zeroStrip(string):

@@ -21,36 +21,28 @@ def main():
                 sys.exit()
 
             case["best", file, method]:
-                for a in fn.listBest(file, method):
+                root = et.parse(file).getroot()
+                for a in fn.listBest(root, method):
                     print(a[0], ' id:', a[1])
 
             #compare two runs
+            #this one should definitely be able to compare from
+            #two different files
             case["compare", file, id_1, id_2, method]:
-                tree = et.parse(file)
-                root = tree.getroot()
+                root = et.parse(file).getroot()
                 fn.fastCompare(root, id_1, id_2, method)
             
             #may be modified later to take from two files
             case ["hybrid", file, id_1, id_2, method]:
-                tree = et.parse(file)
-                root = tree.getroot()
+                root = et.parse(file).getroot()
 
                 fn.fastHybrid(root, id_1, id_2, method)
-            #show how many times a segment has been reset on (miscounting bug?)
+
+            #show how many times each segment has been reset on
             case ["resets", file]:
-                slist = fn.findSegments(file)
-                for segment in fn.fastReset(file):
-                    print(
-                        segment[1].ljust(len(max(slist, key=len)), ' '),
-                        "-",
-                        segment[0]
-                    )
+                root = et.parse(file).getroot()
 
-            case ["test", file]:
-                tree = et.parse(file)
-                root = tree.getroot()
-
-                fn.fastCompare(root, '110', '140', 'igt')
+                print(fn.fastResetCounter(root))
 
             case _:
                 print("Unrecognized Command")
