@@ -35,10 +35,11 @@ def findCompleted(root, method=None):
         for time in attempt.iter("GameTime")
     ]
 
-def findTime(root, _id, method=None):
+#return the time of a specific completed attempt
+def findAttemptTime(root, _id, method=None):
     for attempt in root.iter("Attempt"):
         if attempt.get("id") == _id:
-            return attempt[0].text if method=="rta" else attempt[1].text
+            return attempt[0].text if method=="rta" else attempt[1].text if len(attempt) else "*" + zeroStrip(toMinutes(sum(allSeconds2(findRunSegmentTimes(root, _id, method)))))
 
 #returns a list of all segment times recorded for the specified segment
 def findRecordedSegmentTimes(root, name, method=None):
@@ -59,6 +60,27 @@ def findRecordedSegmentTimes(root, name, method=None):
             if segment.find("Name").text == name
         ]
 
+#returns a list of all segment times recorded for the specified range of attempts
+def findRangeSegmentTimes(root, x, y, name, method=None):
+    if method == 'rta':
+        return [
+            tag.text
+            for segment in root.iter("Segment")
+            for time in segment.iter("Time")
+            for tag in time.iter("RealTime")
+            if segment.find("Name").text == name
+            if int(time.get("id")) in range(x, y)
+        ]
+    else:
+        return [
+            tag.text
+            for segment in root.iter("Segment")
+            for time in segment.iter("Time")
+            for tag in time.iter("GameTime")
+            if segment.find("Name").text == name
+            if int(time.get("id")) in range(x, y)
+        ]
+
 #returns a list of all segment times recorded for the specified attempt id
 def findRunSegments(root, _id, method=None):
     if method == 'rta':
@@ -77,6 +99,27 @@ def findRunSegments(root, _id, method=None):
             for tag in time.iter("GameTime")
             if time.get('id') == _id
         ]
+
+def findRunSegmentTimes(root, _id, method=None):
+    if method == 'rta':
+        return [
+            tag.text
+            if len(tag.text) else "00:00:00.00"
+            for segment in root.iter("Segment")
+            for time in segment.iter("Time")
+            for tag in time.iter("RealTime")
+            if time.get('id') == _id
+        ]
+    else:
+        return [
+            tag.text
+            if len(tag.text) else "00:00:00.00"
+            for segment in root.iter("Segment")
+            for time in segment.iter("Time")
+            for tag in time.iter("GameTime")
+            if time.get('id') == _id
+        ]
+
 
 #return the segment in which a run was reset on
 def findResetPoint(root, _id):
@@ -174,11 +217,11 @@ def fastCompare(root, id_1, id_2, method=None):
     print("\\"* (len(max(segments, key=len)) + 42))
     print(
         "Total:".ljust(len(max(segments, key=len)), ' '), "|",
-        zeroStrip(findTime(root, id_1, method)).ljust(10, ' '),
-        zeroStrip(findTime(root, id_2, method)).rjust(28, ' '),
+        zeroStrip(findAttemptTime(root, id_1, method)).ljust(10, ' '),
+        zeroStrip(findAttemptTime(root, id_2, method)).rjust(28, ' '),
     )
 
-def fastDCompare(root_1, id_1, root_2, id_2, method=None):
+def fastCompareTwo(root_1, id_1, root_2, id_2, method=None):
     run_1 = findRunSegments(root_1, id_1, method)
     run_2 = findRunSegments(root_2, id_2, method)
     segments = findSegments(root_1) #just to get the length of the longest segment
@@ -196,8 +239,8 @@ def fastDCompare(root_1, id_1, root_2, id_2, method=None):
     print("\\"* (len(max(segments, key=len)) + 42))
     print(
         "Total:".ljust(len(max(segments, key=len)), ' '), "|",
-        zeroStrip(findTime(root_1, id_1, method)).ljust(10, ' '),
-        zeroStrip(findTime(root_2, id_2, method)).rjust(28, ' '),
+        zeroStrip(findAttemptTime(root_1, id_1, method)).ljust(10, ' '),
+        zeroStrip(findAttemptTime(root_2, id_2, method)).rjust(28, ' '),
     )
 
 #print how many times each segment has been reset on
@@ -215,10 +258,39 @@ def fastResetCounter(root):
         sum(counted)
     )
 
+#print the time variance in a range of runs for each segment in a file
+def fastVariance(root, x, y, method):
+    segments = findSegments(root)
+    length = len(max(segments, key=len))
+    sorter = sorted([
+        (
+            max(
+                allSeconds2(findRangeSegmentTimes(root, x, y, segment, method))
+            ) - min(
+                allSeconds2(findRangeSegmentTimes(root, x, y, segment, method))
+            ) 
+            if len(allSeconds2(findRangeSegmentTimes(root, x, y, segment, method))) 
+            else 0.0,
+            
+            allSeconds2(findRangeSegmentTimes(root, x, y, segment, method)),
+            
+            segment
+        ) 
+        for segment in segments
+    ], reverse=1)
+    
+    for segment in sorter:
+        print(
+            segment[2].ljust(length, ' '),
+            round(max(segment[1]) - min(segment[1]), 2) if len(segment[1]) else 0.0
+        )
+
+## Conversion Tools ##
+
 #turns a string of time into a float
 def toSeconds(string):
     #print("passed:", string)
-    if string:
+    if isinstance(string, str):
         x = string.split(':')
         return int(x[0])*3600 + int(x[1])*60 + float(x[2])
     return 0
@@ -235,7 +307,11 @@ def allMinutes(the_list):
 def allSeconds(the_list):
     return [toSeconds(time[1]) for time in the_list]
 
+def allSeconds2(the_list):
+    return [toSeconds(time) for time in the_list]
+
 #cuts the leading and trailing zeroes off of a string of time
 def zeroStrip(string):
-    if string:
+    if isinstance(string, str):
         return string.strip("0:")
+    return "0:00.0"

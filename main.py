@@ -31,11 +31,11 @@ def main():
                 root = et.parse(file).getroot()
                 fn.fastCompare(root, id_1, id_2, method)
             
-            case["dcompare", file_1, id_1, file_2, id_2, method]:
+            case["compare", file_1, id_1, file_2, id_2, method]:
                 root_1 = et.parse(file_1).getroot()
                 root_2 = et.parse(file_2).getroot()
 
-                fn.fastDCompare(root_1, id_1, root_2, id_2, method)
+                fn.fastCompareTwo(root_1, id_1, root_2, id_2, method)
             
             #may be modified later to take from two files
             case ["hybrid", file, id_1, id_2, method]:
@@ -49,8 +49,9 @@ def main():
 
                 print(fn.fastResetCounter(root))
             
-            case ["variance", file]:
-                pass
+            case ["variance", file, x, y, method]:
+                root = et.parse(file).getroot()
+                fn.fastVariance(root, int(x), int(y), method)
             
             case["help"]:
                 print(
@@ -60,6 +61,7 @@ def main():
                     "   best <file> [rta, igt]\n\n",
                     "compare - prints a comparison of two runs\n",
                     "   compare <file> <id1> <id2> [rta, igt]\n\n",
+                    "   compare <file1> <id1> <file2> <id2> [rta, igt]"
                     "hybrid - prints a list of split times\n"
                     "   created from the better of two segments in each run\n",
                     "   hybrid <file> <id1> <id2> [rta, igt]\n\n",
