@@ -1,17 +1,17 @@
-from types import NoneType
 import xml.etree.ElementTree as et
 import os
 
 red         = "\033[31m"
 green       = "\033[32m"
 clear       = "\033[0m"
+cursor_name = "comparator"
 
 ## Functions that extract data from the lss file ##
 
 ## Finders ##
 #returns a list of all comparison names the file passed
-def findComparisons(file):
-    return {comparison.attrib['name'] for comparison in et.parse(file).getroot().iter("SplitTime")}
+def findComparisons(root):
+    return {comparison.attrib['name'] for comparison in root.iter("SplitTime")}
 
 #returns a list of all attempt ids in the file passed
 def findAttemptIDs(root):
@@ -22,20 +22,25 @@ def findSegments(root):
     return [segment.text for segment in root.iter("Name")]
 
 #returns a list of all completed runs' ids, and their times
-def findCompleted(file, method=None):
+def findCompleted(root, method=None):
     if method == "rta":
         return [
             (attempt.attrib['id'], time.text)
-        for attempt in et.parse(file).getroot().iter("Attempt") 
+        for attempt in root.iter("Attempt") 
         for time in attempt.iter("RealTime")
     ]
 
     elif method == "igt":
         return [
             (attempt.attrib['id'], time.text)
-        for attempt in et.parse(file).getroot().iter("Attempt")
+        for attempt in root.iter("Attempt")
         for time in attempt.iter("GameTime")
     ]
+
+def findTime(root, _id, method=None):
+    for attempt in root.iter("Attempt"):
+        if attempt.get("id") == _id:
+            return attempt[0].text if method=="rta" else attempt[1].text
 
 #returns a list of all segment times recorded for the specified segment
 def findRecordedSegmentTimes(root, name, method=None):
@@ -133,6 +138,12 @@ def fastCompare(root, id_1, id_2, method=None):
             clear,
             zeroStrip(y[1]).rjust(15, ' ')
         )
+    print("\\"* (len(max(segments, key=len)) + 42))
+    print(
+        "Total:".ljust(len(max(segments, key=len)), ' '), "|",
+        zeroStrip(findTime(root, id_1, method)).ljust(10, ' '),
+        zeroStrip(findTime(root, id_2, method)).rjust(28, ' '),
+    )
 
 #return the segment in which a run was reset on
 def findResetPoint(root, _id):

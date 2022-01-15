@@ -12,10 +12,9 @@ error       = red + "ERROR" + clear
 def main():
     #This list stores the file objects
     file_list = []
-
     #The Command-Line Loop
     def cmdloop():
-        command = input(f"{green}comparator{clear}>")
+        command = input(f"{green}{fn.cursor_name}{clear}>")
         match command.split():
             case ["quit"]:
                 sys.exit()
@@ -43,6 +42,24 @@ def main():
                 root = et.parse(file).getroot()
 
                 print(fn.fastResetCounter(root))
+            
+            case["help"]:
+                print(
+                    " quit - exits the program\n",
+                    "   quit\n\n",
+                    "best - prints a list of all recorded times from fastest to slowest\n",
+                    "   best <file> [rta, igt]\n\n",
+                    "compare - prints a comparison of two runs\n",
+                    "   compare <file> <id1> <id2> [rta, igt]\n\n",
+                    "hybrid - prints a list of split times\n"
+                    "   created from the better of two segments in each run\n",
+                    "   hybrid <file> <id1> <id2> [rta, igt]\n\n",
+                    "resets - print how many times each segment has been reset on\n",
+                    "   resets <file>\n"
+                )
+            
+            case["set", name]:
+                fn.cursor_name = name
 
             case _:
                 print("Unrecognized Command")
