@@ -1,7 +1,10 @@
 # split-comparator
-compares sets of splits in a livesplit file
+A comparison tool for .lss files from LiveSplit
 
-requires the python 3.10 interpreter for its use of pattern matching
-do not use with cmd, cmd does not support ansi, the ansi color codes will not work
-use a different terminal instead
-dont use powershell either
+Functions:
+  - Count how many times each segment has been reset on.
+  - Compare each segment from two runs in the same file.
+  - Create a hybrid run from the better segments of two runs.
+  - Create a list of all your runs in order from fastest to slowest, and show their IDs.
+
+If you've skipped a segment in a run, the comparison tool will also skip the segment in its comparisons
