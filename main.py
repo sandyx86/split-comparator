@@ -1,4 +1,4 @@
-import sys, os
+import sys
 import func as fn
 import xml.etree.ElementTree as et
 

@@ -1,14 +1,12 @@
 import xml.etree.ElementTree as et
-import os
 
 red         = "\033[31m"
 green       = "\033[32m"
 clear       = "\033[0m"
 cursor_name = "comparator"
 
-## Functions that extract data from the lss file ##
+## Returners ##
 
-## Finders ##
 #returns a list of all comparison names the file passed
 def findComparisons(root):
     return {comparison.attrib['name'] for comparison in root.iter("SplitTime")}
@@ -80,6 +78,38 @@ def findRunSegments(root, _id, method=None):
             if time.get('id') == _id
         ]
 
+#return the segment in which a run was reset on
+def findResetPoint(root, _id):
+    one = findSegments(root)[0]
+
+    y = [
+        segment for segment in reversed(
+            [segment for segment in root.iter("Segment")]
+        )
+    ]
+
+    x = [
+        y[index-1].find("Name").text
+        for index, segment in enumerate(y) 
+        for time in segment.iter("Time") 
+        if time.get("id") == _id
+    ]
+
+    #the list that x and y create isn't 100% perfect,
+    #[index - 1] works for every segment besides the first one in the list
+    #because (index = -1) returns the last item in a list
+    #which would be the first segment on a finished run, since the list is reversed
+    #so these two if statements fix that
+
+    #if x[0] returns None, return the first segment
+    if not len(x):
+        return one
+
+    #if x[0] returns the name of the first segment, don't return it
+    if x[0] != one:
+            return x[0]
+    return
+
 #pass a list of split times, return a list of segment times
 #this one needs changed
 def splitToSegment(splits):
@@ -109,6 +139,9 @@ def listBest(root, string):
 #returns a list of the lower of two numbers in two zipped lists
 def lowerSegment(l1, l2):
     return [x if x < y else y for x, y in zip(l1, l2)]
+
+
+## Printers ##
 
 #prints a list of the better of each segment in two runs
 def fastHybrid(root, id_1, id_2, method):
@@ -145,37 +178,7 @@ def fastCompare(root, id_1, id_2, method=None):
         zeroStrip(findTime(root, id_2, method)).rjust(28, ' '),
     )
 
-#return the segment in which a run was reset on
-def findResetPoint(root, _id):
-    one = findSegments(root)[0]
 
-    y = [
-        segment for segment in reversed(
-            [segment for segment in root.iter("Segment")]
-        )
-    ]
-
-    x = [
-        y[index-1].find("Name").text
-        for index, segment in enumerate(y) 
-        for time in segment.iter("Time") 
-        if time.get("id") == _id
-    ]
-
-    #the list that x and y create isn't 100% perfect,
-    #[index - 1] works for every segment besides the first one in the list
-    #because (index = -1) returns the last item in a list
-    #which would be the first segment on a finished run, since the list is reversed
-    #so these two if statements fix that
-
-    #if x[0] returns None, return the first segment
-    if not len(x):
-        return one
-
-    #if x[0] returns the name of the first segment, don't return it
-    if x[0] != one:
-            return x[0]
-    return
 
 #print how many times each segment has been reset on
 def fastResetCounter(root):
