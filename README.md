@@ -3,7 +3,7 @@ A comparison tool for .lss files from LiveSplit
 
 Functions:
   - Count how many times each segment has been reset on.
-  - Compare each segment from two runs in the same file.
+  - Compare each segment from two runs in the same or different files.
   - Create a hybrid run from the better segments of two runs.
   - Create a list of all your runs in order from fastest to slowest, and show their IDs.
 
