@@ -66,7 +66,9 @@ def main():
                     "   created from the better of two segments in each run\n",
                     "   hybrid <file> <id1> <id2> [rta, igt]\n\n",
                     "resets - print how many times each segment has been reset on\n",
-                    "   resets <file>\n"
+                    "   resets <file>\n",
+                    "variance - prints the maximum difference for each segment in a range of runs\n",
+                    "   variance <file> <x> <y> [rta, igt]"
                 )
             
             case["set", name]:
