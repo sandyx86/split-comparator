@@ -11,10 +11,9 @@ error       = red + "ERROR" + clear
 
 def main():
     #This list stores the file objects
-    file_list = []
     #The Command-Line Loop
     def cmdloop():
-        command = input(f"{green}{fn.cursor_name}{clear}>")
+        command = input(f"{green}comparator{clear}>")
         match command.split():
             case ["quit"]:
                 sys.exit()
@@ -30,6 +29,14 @@ def main():
             case["compare", file, id_1, id_2, method]:
                 root = et.parse(file).getroot()
                 fn.fastCompare(root, id_1, id_2, method)
+
+            #oddly specific command, unfinished for now
+            #compare an attempt against another file's PB
+            case["compare", file_1, id_1, file_2, "pb", method]:
+                root_1 = et.parse(file_1).getroot()
+                root_2 = et.parse(file_2).getroot()
+
+                fn.fastComparePB(root_1, id_1, root_2, method)    
             
             case["compare", file_1, id_1, file_2, id_2, method]:
                 root_1 = et.parse(file_1).getroot()
@@ -71,9 +78,6 @@ def main():
                     "   variance <file> <x> <y> [rta, igt]"
                 )
             
-            case["set", name]:
-                fn.cursor_name = name
-
             case _:
                 print("Unrecognized Command")
         

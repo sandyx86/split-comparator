@@ -3,7 +3,6 @@ import xml.etree.ElementTree as et
 red         = "\033[31m"
 green       = "\033[32m"
 clear       = "\033[0m"
-cursor_name = "comparator"
 
 ## Returners ##
 
@@ -11,6 +10,12 @@ cursor_name = "comparator"
 def findComparisons(root):
     return {comparison.attrib['name'] for comparison in root.iter("SplitTime")}
 
+#return a list of all segment times for the comparison name passed
+def findComparisonSegments(root, name, method=None):
+    if method == "igt":
+        return [tag.text for segment in root.iter("Segment") for time in segment.iter("SplitTime") for tag in time.iter("GameTime") if time.get("name") == name]
+    return [tag.text for segment in root.iter("Segment") for time in segment.iter("SplitTime") for tag in time.iter("RealTime") if time.get("name") == name]
+    
 #returns a list of all attempt ids in the file passed
 def findAttemptIDs(root):
     return [attempt.attrib['id'] for attempt in root.iter("Attempt")]
@@ -154,14 +159,16 @@ def findResetPoint(root, _id):
     return
 
 #pass a list of split times, return a list of segment times
-#this one needs changed
+#splits must already be converted to seconds
 def splitToSegment(splits):
-    segments = []
-    zero = 0
-    for split in splits:
-        segments.append(toSeconds(split) - zero)
-        zero += toSeconds(split)
-    return segments
+    return allMinutes(
+        [
+            round(splits[index] 
+            if index == 0 
+            else splits[index] - splits[index - 1], 2) 
+            for index, _ in enumerate(splits)
+        ]
+    )
 
 #pass a list of segment times, return a list of split times
 #segments must already be converted to seconds
@@ -241,6 +248,28 @@ def fastCompareTwo(root_1, id_1, root_2, id_2, method=None):
         "Total:".ljust(len(max(segments, key=len)), ' '), "|",
         zeroStrip(findAttemptTime(root_1, id_1, method)).ljust(10, ' '),
         zeroStrip(findAttemptTime(root_2, id_2, method)).rjust(28, ' '),
+    )
+
+def fastComparePB(root_1, id_1, root_2, method=None):
+    run_1 = findRunSegments(root_1, id_1, method)
+    run_2 = splitToSegment(allSeconds2(findComparisonSegments(root_2, "Personal Best", method)))
+    segments = findSegments(root_1)
+
+    for x, y in zip(run_1, run_2):
+        diff = toSeconds(x[1]) - toSeconds(y)
+        print(
+            x[0].ljust(len(max(segments, key=len)), ' '), "|",
+            zeroStrip(x[1]).ljust(10, ' '),
+            green if diff <= 0 else red,
+            str(round(diff, 2)).rjust(10, ' '),
+            clear,
+            zeroStrip(y).rjust(15, ' ')
+        )
+    print("\\"* (len(max(segments, key=len)) + 42))
+    print(
+        "Total:".ljust(len(max(segments, key=len)), ' '), "|",
+        zeroStrip(findAttemptTime(root_1, id_1, method)).ljust(10, ' '),
+        #zeroStrip(findAttemptTime(root_2, id_2, method)).rjust(28, ' '),
     )
 
 #print how many times each segment has been reset on
