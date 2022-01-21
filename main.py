@@ -9,12 +9,13 @@ blink_on    = "\033[5m"
 blink_off   = "\033[25m"
 error       = red + "ERROR" + clear
 
+
 def main():
-    #This list stores the file objects
     #The Command-Line Loop
     def cmdloop():
         command = input(f"{green}comparator{clear}>")
-        match command.split():
+
+        match pathSplitter(command):
             case ["quit"]:
                 sys.exit()
 
@@ -80,11 +81,20 @@ def main():
             
             case _:
                 print("Unrecognized Command")
+                #print(pathSplitter(command))
         
         cmdloop()
     
     cmdloop()
 
+
+def pathSplitter(string):
+    if "\"" in string:
+        #paths = [odd for index, odd in enumerate(string.split("\"")) if index % 2]
+        return pathSplitter(string.split("\"")[0].strip()) + [string.split("\"")[1]] + pathSplitter(''.join(string.split("\"")[2:5]).strip())
+    else: 
+        return string.split()
+    
 
 if __name__ == "__main__":
     main()
