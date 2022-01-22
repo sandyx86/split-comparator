@@ -74,7 +74,7 @@ def findRangeSegmentTimes(root, x, y, name, method=None):
             for time in segment.iter("Time")
             for tag in time.iter("RealTime")
             if segment.find("Name").text == name
-            if int(time.get("id")) in range(x, y)
+            if int(time.get("id")) in range(x, y+1)
         ]
     else:
         return [
@@ -291,6 +291,7 @@ def fastResetCounter(root):
 def fastVariance(root, x, y, method):
     segments = findSegments(root)
     length = len(max(segments, key=len))
+    #r_range = allSeconds2(findRangeSegmentTimes(root, x, y, segments, method))
     sorter = sorted([
         (
             max(
@@ -311,7 +312,8 @@ def fastVariance(root, x, y, method):
     for segment in sorter:
         print(
             segment[2].ljust(length, ' '),
-            round(max(segment[1]) - min(segment[1]), 2) if len(segment[1]) else 0.0
+            "|",
+            round(max(segment[1]) - min(segment[1]), 3) if len(segment[1]) else 0.0,
         )
 
 ## Conversion Tools ##
