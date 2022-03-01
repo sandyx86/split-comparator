@@ -1,0 +1,14 @@
+quit - exits the program.
+   quit
+best - prints a list of all recorded times from fastest to slowest.
+   best <file> [rta, igt]
+compare - prints a comparison of two runs.
+   compare <file> <id1> <id2> [rta, igt]
+   compare <file1> <id1> <file2> <id2> [rta, igt]
+hybrid - prints a list of split times created from the better of two segments in each run.
+   hybrid <file> <id1> <id2> [rta, igt]
+resets - print how many times each segment has been reset on.
+   resets <file>
+variance - prints the maximum difference for each segment in a range of runs.
+   variance <file> <x> <y> [rta, igt]
+help - prints this list of commands.
