@@ -1,6 +1,7 @@
 import sys
 import func as fn
 import xml.etree.ElementTree as et
+from os import path
 
 red         = "\033[31m"
 green       = "\033[32m"
@@ -15,73 +16,72 @@ def main():
     def cmdloop():
         command = input(f"{green}comparator{clear}>")
 
-        match pathSplitter(command):
-            case ["quit"]:
-                sys.exit()
+        filepaths = [arg for arg in pathSplitter(command) if path.isfile(arg)]
+        
+        method = "igt" if "igt" in command else "rta"
+        idl = [x for x in command.split() if x.isdigit()]
 
-            case["best", file, method]:
-                root = et.parse(file).getroot()
+        if "quit" in command:
+            sys.exit()
+        
+        elif "best" in command:
+            root = et.parse(filepaths[0]).getroot() if len(filepaths) else None
+            if not root == None:
+                
                 for a in fn.listBest(root, method):
                     print(a[0], ' id:', a[1])
+            else:
+                print("No valid file")
 
-            #compare two runs
-            #this one should definitely be able to compare from
-            #two different files
-            case["compare", file, id_1, id_2, method]:
-                root = et.parse(file).getroot()
-                fn.fastCompare(root, id_1, id_2, method)
+        elif "compare" in command:
+            root_1 = et.parse(filepaths[0]).getroot() if len(filepaths) else None
+            root_2 = et.parse(filepaths[1]).getroot() if len(filepaths) > 1 else None
 
-            #oddly specific command, unfinished for now
-            #compare an attempt against another file's PB
-            case["compare", file_1, id_1, file_2, "pb", method]:
-                root_1 = et.parse(file_1).getroot()
-                root_2 = et.parse(file_2).getroot()
+            if not len(idl):
+                cmdloop()
 
-                fn.fastComparePB(root_1, id_1, root_2, method)    
+            if root_1 == None:
+                cmdloop()
+
+            if root_2 == None:
+                fn.fastCompare(root_1, idl[0], idl[-1], method)
+                cmdloop()
+                
+            fn.fastCompareTwo(root_1, idl[0], root_2, idl[-1], method)
+
+        elif "hybrid" in command:
+            root_1 = et.parse(filepaths[0]).getroot() if len(filepaths) else None
+            root_2 = et.parse(filepaths[1]).getroot() if len(filepaths) > 1 else None
+
+            if not len(idl):
+                cmdloop()
+
+            if root_1 == None:
+                cmdloop()
+
+            fn.fastHybrid(root_1, idl[0], idl[-1], method)
+
+        elif "resets" in command:
+            root = et.parse(filepaths[0]).getroot() if len(filepaths) else None
             
-            case["compare", file_1, id_1, file_2, id_2, method]:
-                root_1 = et.parse(file_1).getroot()
-                root_2 = et.parse(file_2).getroot()
+            if not root == None:
+                fn.fastResetCounter(root)
 
-                fn.fastCompareTwo(root_1, id_1, root_2, id_2, method)
+        elif "variance" in command:
+            root = et.parse(filepaths[0]).getroot() if len(filepaths) else None
             
-            #may be modified later to take from two files
-            case ["hybrid", file, id_1, id_2, method]:
-                root = et.parse(file).getroot()
+            if not len(idl):
+                cmdloop()
 
-                fn.fastHybrid(root, id_1, id_2, method)
+            if root == None:
+                cmdloop()
+            
+            fn.fastVariance(root, idl[0], idl[-1], method)
 
-            #show how many times each segment has been reset on
-            case ["resets", file]:
-                root = et.parse(file).getroot()
-
-                print(fn.fastResetCounter(root))
-            
-            case ["variance", file, x, y, method]:
-                root = et.parse(file).getroot()
-                fn.fastVariance(root, int(x), int(y), method)
-            
-            case["help"]:
-                print(
-                    " quit - exits the program\n",
-                    "   quit\n\n",
-                    "best - prints a list of all recorded times from fastest to slowest\n",
-                    "   best <file> [rta, igt]\n\n",
-                    "compare - prints a comparison of two runs\n",
-                    "   compare <file> <id1> <id2> [rta, igt]\n\n",
-                    "   compare <file1> <id1> <file2> <id2> [rta, igt]"
-                    "hybrid - prints a list of split times\n"
-                    "   created from the better of two segments in each run\n",
-                    "   hybrid <file> <id1> <id2> [rta, igt]\n\n",
-                    "resets - print how many times each segment has been reset on\n",
-                    "   resets <file>\n",
-                    "variance - prints the maximum difference for each segment in a range of runs\n",
-                    "   variance <file> <x> <y> [rta, igt]"
-                )
-            
-            case _:
-                print("Unrecognized Command")
-                #print(pathSplitter(command))
+        elif "help" in command:
+            with open("help.txt", 'r') as help_file:
+                for line in help_file:
+                    print(line, end='')
         
         cmdloop()
     

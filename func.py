@@ -11,7 +11,7 @@ def findComparisons(root):
     return {comparison.attrib['name'] for comparison in root.iter("SplitTime")}
 
 #return a list of all segment times for the comparison name passed
-def findComparisonSegments(root, name, method=None):
+def findComparisonSegments(root, name, method):
     if method == "igt":
         return [tag.text for segment in root.iter("Segment") for time in segment.iter("SplitTime") for tag in time.iter("GameTime") if time.get("name") == name]
     return [tag.text for segment in root.iter("Segment") for time in segment.iter("SplitTime") for tag in time.iter("RealTime") if time.get("name") == name]
@@ -25,7 +25,7 @@ def findSegments(root):
     return [segment.text for segment in root.iter("Name")]
 
 #returns a list of all completed runs' ids, and their times
-def findCompleted(root, method=None):
+def findCompleted(root, method):
     if method == "rta":
         return [
             (attempt.attrib['id'], time.text)
@@ -41,13 +41,13 @@ def findCompleted(root, method=None):
     ]
 
 #return the time of a specific completed attempt
-def findAttemptTime(root, _id, method=None):
+def findAttemptTime(root, _id, method):
     for attempt in root.iter("Attempt"):
         if attempt.get("id") == _id:
-            return attempt[0].text if method=="rta" else attempt[1].text if len(attempt) else "*" + zeroStrip(toMinutes(sum(allSeconds2(findRunSegmentTimes(root, _id, method)))))
+            return attempt[0].text if len(attempt) else "*" + zeroStrip(toMinutes(sum(allSeconds2(findRunSegmentTimes(root, _id, method))))) if method == "rta" else attempt[1].text
 
 #returns a list of all segment times recorded for the specified segment
-def findRecordedSegmentTimes(root, name, method=None):
+def findRecordedSegmentTimes(root, name, method):
     if method == 'rta':
         return [
             tag.text
@@ -66,7 +66,7 @@ def findRecordedSegmentTimes(root, name, method=None):
         ]
 
 #returns a list of all segment times recorded for the specified range of attempts
-def findRangeSegmentTimes(root, x, y, name, method=None):
+def findRangeSegmentTimes(root, x, y, name, method):
     if method == 'rta':
         return [
             tag.text
@@ -74,7 +74,7 @@ def findRangeSegmentTimes(root, x, y, name, method=None):
             for time in segment.iter("Time")
             for tag in time.iter("RealTime")
             if segment.find("Name").text == name
-            if int(time.get("id")) in range(x, y+1)
+            if int(time.get("id")) in range(int(x), int(y)+1)
         ]
     else:
         return [
@@ -83,11 +83,11 @@ def findRangeSegmentTimes(root, x, y, name, method=None):
             for time in segment.iter("Time")
             for tag in time.iter("GameTime")
             if segment.find("Name").text == name
-            if int(time.get("id")) in range(x, y)
+            if int(time.get("id")) in range(int(x), int(y)+1)
         ]
 
 #returns a list of all segment times recorded for the specified attempt id
-def findRunSegments(root, _id, method=None):
+def findRunSegments(root, _id, method):
     if method == 'rta':
         return [
             (segment.find("Name").text, tag.text)
@@ -105,7 +105,7 @@ def findRunSegments(root, _id, method=None):
             if time.get('id') == _id
         ]
 
-def findRunSegmentTimes(root, _id, method=None):
+def findRunSegmentTimes(root, _id, method):
     if method == 'rta':
         return [
             tag.text
@@ -206,11 +206,11 @@ def fastHybrid(root, id_1, id_2, method):
 
 #prints a comparison of two runs
 #may be modified to optionally show split times instead of segment times
-def fastCompare(root, id_1, id_2, method=None):
+def fastCompare(root, id_1, id_2, method):
     run_1 = findRunSegments(root, id_1, method)
     run_2 = findRunSegments(root, id_2, method)
     segments = findSegments(root) #just to get the length of the longest segment
-
+    
     for x, y in zip(run_1, run_2):
         diff = toSeconds(x[1]) - toSeconds(y[1])
         print(
@@ -228,7 +228,7 @@ def fastCompare(root, id_1, id_2, method=None):
         zeroStrip(findAttemptTime(root, id_2, method)).rjust(28, ' '),
     )
 
-def fastCompareTwo(root_1, id_1, root_2, id_2, method=None):
+def fastCompareTwo(root_1, id_1, root_2, id_2, method):
     run_1 = findRunSegments(root_1, id_1, method)
     run_2 = findRunSegments(root_2, id_2, method)
     segments = findSegments(root_1) #just to get the length of the longest segment
@@ -250,7 +250,7 @@ def fastCompareTwo(root_1, id_1, root_2, id_2, method=None):
         zeroStrip(findAttemptTime(root_2, id_2, method)).rjust(28, ' '),
     )
 
-def fastComparePB(root_1, id_1, root_2, method=None):
+def fastComparePB(root_1, id_1, root_2, method):
     run_1 = findRunSegments(root_1, id_1, method)
     run_2 = splitToSegment(allSeconds2(findComparisonSegments(root_2, "Personal Best", method)))
     segments = findSegments(root_1)
